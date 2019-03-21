@@ -1,0 +1,107 @@
+%%====================================================================
+%% Functions
+%%====================================================================
+
+def povray( pov    : File,
+            height : Str,
+            width  : Str,
+            sr     : Str,
+            er     : Str,
+            sc     : Str,
+            ec     : Str ) -> <png : File>
+in Bash *{
+  povray -D +WT1 \
+    +Opre.png \
+    +W$width \
+    +H$height \
+    +SR$sr \
+    +ER$er \
+    +SC$sc \
+    +EC$ec \
+    $pov
+
+  h=`expr $er - $sr`
+  w=`expr $ec - $sc`
+  png=scene.png
+  convert -crop ${w}x${h}+${sc}+${sr} pre.png $png
+}*
+
+def montage-horz( pnglst : [File] ) -> <png : File>
+in Bash *{
+  png=montage.png
+  montage -geometry +0+0 -tile ${#pnglst[@]}x1 ${pnglst[@]} $png
+}*
+
+def montage-vert( pnglst : [File] ) -> <png : File>
+in Bash *{
+  png=montage.png
+  montage -geometry +0+0 -tile 1x${#pnglst[@]} ${pnglst[@]} $png
+}*
+
+def range( size : Str, n : Str ) -> <lo-lst : [Str], hi-lst : [Str]>
+in Racket *{
+  (require (only-in racket/list range))
+  (define s (string->number size))
+  (define step (/ s (string->number n)))
+  (define lo-lst (map number->string (map floor (range 0 s step))))
+  (define hi-lst (append (cdr lo-lst) (list size)))
+}*
+
+
+%%====================================================================
+%% Input data
+%%====================================================================
+
+let pov : File = 'scene.pov';
+
+
+%%====================================================================
+%% Parameters
+%%====================================================================
+
+let height : Str = 1080;
+let width : Str = 1080;
+let dop : Str = 10;
+
+
+%%====================================================================
+%% Dependencies
+%%====================================================================
+
+let <lo-lst = row-lo-lst : [Str],
+     hi-lst = row-hi-lst : [Str]> =
+  range( size = height, n = dop );
+
+let <lo-lst = col-lo-lst : [Str],
+     hi-lst = col-hi-lst : [Str]> =
+  range( size = width, n = dop );
+
+
+let column : [File] =
+  for sr : Str <- row-lo-lst,
+      er : Str <- row-hi-lst do
+
+    let line : [File] =
+      for sc : Str <- col-lo-lst,
+          ec : Str <- col-hi-lst do
+
+        ( povray( pov    = pov,
+                  height = height,
+                  width  = width,
+                  sr     = sr,
+                  er     = er,
+                  sc     = sc,
+                  ec     = ec )|png ) : File
+      end;
+
+    ( montage-horz( pnglst = line )|png ) : File
+  end;
+
+let <png = result : File> =
+  montage-vert( pnglst = column );
+
+%%====================================================================
+%% Query
+%%====================================================================
+
+result;
