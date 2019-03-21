@@ -110,7 +110,7 @@ On all nodes create a file `.config/cuneiform/cf_worker.json` for in the home di
 On the client node create a file `.config/cuneiform/cf_client.json` and enter
 
     {
-      "cre_node": "cre@y500"
+      "cre_node": "cre@server"
     }
 
 ### Automatic start up
